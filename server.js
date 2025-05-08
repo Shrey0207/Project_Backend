@@ -7,14 +7,15 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 
 app.use(cors({
-  origin: 'https://upappuswna0375g', // ✅ Replace this with actual origin
+  origin: 'http://your-qlik-mashup-domain', // Replace with your actual mashup origin
   credentials: true
 }));
 app.use(express.json());
 
-// POST endpoint to receive userId and return JWT
+// POST endpoint to generate JWT
 app.post('/generate-jwt', async (req, res) => {
   try {
+    // Get the userId and other necessary data from the request body
     const { userId } = req.body;
 
     if (!userId) {
@@ -26,13 +27,14 @@ app.post('/generate-jwt', async (req, res) => {
     // === CONFIGURATION ===
     const snowflakeAccountURL = "nni_sandbox.us-east-1";
     const role = "DQ_POC_ROLE";
-    const ENDPOINT = "fsamamim-novonordisk-nnisandbox.snowflakecomputing.app";
+    const ENDPOINT = "jqamamim-novonordisk-nnisandbox.snowflakecomputing.app";
     const path = "generate_jwt";
     const PAT = process.env.SNOWFLAKE_PAT;
 
-    // === Step 1: Exchange PAT for access token ===
-    const tokenUrl = `https://${snowflakeAccountURL}.snowflakecomputing.com/oauth/token`;
-    const tokenBody = new URLSearchParams({
+    // Step 1: Exchange PAT for access token
+    const tokenUrl = `https://${snowflakeAccountURL}.snowflakecomputing.com/oauth/token`; // Replace with your token URL if needed
+
+    const bodyParams = new URLSearchParams({
       grant_type: "urn:ietf:params:oauth:grant-type:token-exchange",
       subject_token: PAT,
       subject_token_type: "programmatic_access_token",
@@ -40,35 +42,40 @@ app.post('/generate-jwt', async (req, res) => {
     });
 
     const tokenRes = await fetch(tokenUrl, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-      body: tokenBody.toString()
+      method: "POST",
+      headers: {
+        "Content-Type": "application/x-www-form-urlencoded"
+      },
+      body: bodyParams.toString()
     });
 
-    const tokenJson = await tokenRes.json();
-    if (!tokenJson.access_token) {
-      return res.status(500).json({ error: 'Failed to get access token', details: tokenJson });
+    const accessToken = (await tokenRes.text()).trim();
+    console.log("Access token:", accessToken);
+
+    if (!accessToken) {
+      return res.status(500).json({ error: 'Access token generation failed' });
     }
 
-    const accessToken = tokenJson.access_token;
-
-    // === Step 2: Call SPCS JWT Generator ===
+    // Step 2: Call SPCS container endpoint to generate JWT
     const spcsUrl = `https://${ENDPOINT}/${path}`;
     const spcsRes = await fetch(spcsUrl, {
-      method: 'POST',
+      method: "POST",
       headers: {
-        'Authorization': `Snowflake Token="${accessToken}"`
+        "Authorization": `Snowflake Token="${accessToken}"`
       }
     });
 
     const spcsJson = await spcsRes.json();
-    if (spcsJson?.data?.[0]?.[1]) {
-      const jwt = spcsJson.data[0][1];
-      return res.json({ jwt });
+    console.log("SPCS Raw Response:", spcsJson);
+
+    // Extract JWT from the response
+    if (spcsJson?.data && spcsJson.data[0] && spcsJson.data[0][1]) {
+      const jwtToken = spcsJson.data[0][1];
+      console.log("Generated JWT:", jwtToken);
+      return res.json({ jwt: jwtToken });
     } else {
       return res.status(500).json({ error: 'Unexpected SPCS response format', spcsJson });
     }
-
   } catch (err) {
     console.error('Error in /generate-jwt:', err);
     return res.status(500).json({ error: 'Internal server error', message: err.message });

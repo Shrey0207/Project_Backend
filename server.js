@@ -1,28 +1,34 @@
 const express = require('express');
-const fetch = require('node-fetch'); // if using Node 18+, native fetch is available
+const fetch = require('node-fetch');
 const cors = require('cors');
-require('dotenv').config(); // Optional: to load secrets from .env
-require('dotenv').config(); 
+require('dotenv').config();
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 
 app.use(cors({
-  origin: '*', // Replace with your actual mashup origin
+  origin: 'http://your-qlik-mashup-domain', // ✅ Replace this with actual origin
   credentials: true
 }));
 app.use(express.json());
 
-// Endpoint to return final JWT from SPCS
-app.get('/get_jwt', async (req, res) => {
+// POST endpoint to receive userId and return JWT
+app.post('/generate-jwt', async (req, res) => {
   try {
+    const { userId } = req.body;
+
+    if (!userId) {
+      return res.status(400).json({ error: 'Missing userId in request body' });
+    }
+
+    console.log(`🔐 JWT requested by user: ${userId}`);
+
     // === CONFIGURATION ===
     const snowflakeAccountURL = "nni_sandbox.us-east-1";
     const role = "DQ_POC_ROLE";
     const ENDPOINT = "fsamamim-novonordisk-nnisandbox.snowflakecomputing.app";
     const path = "generate_jwt";
-
-    const PAT = process.env.SNOWFLAKE_PAT; // Move your PAT to a .env file
+    const PAT = process.env.SNOWFLAKE_PAT;
 
     // === Step 1: Exchange PAT for access token ===
     const tokenUrl = `https://${snowflakeAccountURL}.snowflakecomputing.com/oauth/token`;
@@ -40,7 +46,6 @@ app.get('/get_jwt', async (req, res) => {
     });
 
     const tokenJson = await tokenRes.json();
-
     if (!tokenJson.access_token) {
       return res.status(500).json({ error: 'Failed to get access token', details: tokenJson });
     }
@@ -57,8 +62,6 @@ app.get('/get_jwt', async (req, res) => {
     });
 
     const spcsJson = await spcsRes.json();
-
-    // Extract JWT from response
     if (spcsJson?.data?.[0]?.[1]) {
       const jwt = spcsJson.data[0][1];
       return res.json({ jwt });
@@ -67,11 +70,11 @@ app.get('/get_jwt', async (req, res) => {
     }
 
   } catch (err) {
-    console.error('Error in /get_jwt:', err);
+    console.error('Error in /generate-jwt:', err);
     return res.status(500).json({ error: 'Internal server error', message: err.message });
   }
 });
 
 app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
+  console.log(`🚀 Server running on port ${PORT}`);
 });

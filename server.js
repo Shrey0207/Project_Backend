@@ -26,7 +26,7 @@ app.post('/generate-jwt', async (req, res) => {
   try {
     // STEP 1 — Extract Qlik session cookie
     const cookieHeader = req.headers.cookie;
-    const sessionId = getCookieValue(cookieHeader, 'X-Qlik-Session');
+    const sessionId = getCookieValue(cookieHeader, 'X-Qlik-Session-HTTP');
 
     if (!sessionId) {
       return res.status(401).json({ error: 'Missing X-Qlik-Session cookie' });

@@ -7,64 +7,38 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 
 app.use(cors({
-  origin: 'http://upappuswna0375g',
+  origin: 'http://upappuswna0375g', // exact match, including protocol
   credentials: true
 }));
 
 app.use(express.json());
 
-// 🔥 UTIL: Extract cookie value from header
-function getCookieValue(cookieHeader, cookieName) {
-  if (!cookieHeader) return null;
-  const cookies = cookieHeader.split(';').map(c => c.trim());
-  const target = cookies.find(c => c.startsWith(`${cookieName}=`));
-  return target ? target.split('=')[1] : null;
-}
-
-// 🔐 JWT endpoint
+// POST endpoint to generate JWT
 app.post('/generate-jwt', async (req, res) => {
   try {
-    // STEP 1 — Extract Qlik session cookie
-    const cookieHeader = req.headers.cookie;
-    //const sessionId = getCookieValue(cookieHeader, 'X-Qlik-Session-HTTP');
-    const sessionId = "4d5cbc1c-7e23-4789-bbd1-3b1c9526d1f2"
-
-    if (!sessionId) {
-      return res.status(401).json({ error: 'Missing X-Qlik-Session cookie' });
-    }
-
-    // STEP 2 — Call Qlik Proxy Session API to get user info
-    const qpsUrl = `http://upappuswna0375g/qps/session/${sessionId}`;
-
-    const qpsRes = await fetch(qpsUrl, {
-      method: 'GET',
-      headers: {
-        'Content-Type': 'application/json',
-        'Cookie': `X-Qlik-Session=${sessionId}`
-      }
-    });
-
-    if (!qpsRes.ok) {
-      const errorText = await qpsRes.text();
-      console.error('❌ QPS Error:', errorText);
-      return res.status(401).json({ error: 'Invalid Qlik session' });
-    }
-
-    const qpsJson = await qpsRes.json();
-    const userId = qpsJson?.userId;
+    // Get the userId and other necessary data from the request body
+    const { userId } = req.body;
 
     if (!userId) {
-      return res.status(401).json({ error: 'User ID not found in QPS response' });
+      return res.status(400).json({ error: 'Missing userId in request body' });
     }
 
-    console.log(`🔐 JWT requested by Qlik user: ${userId}`);
+    console.log(`🔐 JWT requested by user: ${userId}`);
 
-    // === Snowflake Config ===
+    // === CONFIGURATION ===
     const snowflakeAccountURL = "nni_sandbox.us-east-1";
     const role = "DQ_POC_ROLE";
     const ENDPOINT = "jqamamim-novonordisk-nnisandbox.snowflakecomputing.app";
     const path = "generate_jwt";
     const PAT = process.env.SNOWFLAKE_PAT;
+
+    // Step 1: Exchange PAT for access token
+    const tokenUrl = `https://${snowflakeAccountURL}.snowflakecomputing.com/oauth/token`; // Replace with your token URL if needed
+
+    if (!PAT) {
+      console.error("❌ PAT is undefined");
+      return res.status(500).json({ error: 'PAT missing' });
+    }
 
     const bodyParams = new URLSearchParams({
       grant_type: "urn:ietf:params:oauth:grant-type:token-exchange",
@@ -73,7 +47,7 @@ app.post('/generate-jwt', async (req, res) => {
       scope: `session:role:${role} ${ENDPOINT}`
     });
 
-    const tokenRes = await fetch(`https://${snowflakeAccountURL}.snowflakecomputing.com/oauth/token`, {
+    const tokenRes = await fetch(tokenUrl, {
       method: "POST",
       headers: {
         "Content-Type": "application/x-www-form-urlencoded"
@@ -82,12 +56,15 @@ app.post('/generate-jwt', async (req, res) => {
     });
 
     const accessToken = (await tokenRes.text()).trim();
+    console.log("Access token:", accessToken);
 
     if (!accessToken) {
       return res.status(500).json({ error: 'Access token generation failed' });
     }
 
-    const spcsRes = await fetch(`https://${ENDPOINT}/${path}`, {
+    // Step 2: Call SPCS container endpoint to generate JWT
+    const spcsUrl = `https://${ENDPOINT}/${path}`;
+    const spcsRes = await fetch(spcsUrl, {
       method: "POST",
       headers: {
         "Authorization": `Snowflake Token="${accessToken}"`
@@ -95,7 +72,9 @@ app.post('/generate-jwt', async (req, res) => {
     });
 
     const spcsJson = await spcsRes.json();
+    console.log("SPCS Raw Response:", spcsJson);
 
+    // Extract JWT from the response
     if (spcsJson?.data && spcsJson.data[0] && spcsJson.data[0][1]) {
       const jwtToken = spcsJson.data[0][1];
       console.log("Generated JWT:", jwtToken);
@@ -103,7 +82,6 @@ app.post('/generate-jwt', async (req, res) => {
     } else {
       return res.status(500).json({ error: 'Unexpected SPCS response format', spcsJson });
     }
-
   } catch (err) {
     console.error('Error in /generate-jwt:', err);
     return res.status(500).json({ error: 'Internal server error', message: err.message });

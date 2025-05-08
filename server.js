@@ -7,7 +7,7 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 
 app.use(cors({
-  origin: 'null', // ✅ Replace this with actual origin
+  origin: 'https://upappuswna0375g', // ✅ Replace this with actual origin
   credentials: true
 }));
 app.use(express.json());

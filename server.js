@@ -7,7 +7,7 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 
 app.use(cors({
-  origin: 'http://your-qlik-mashup-domain', // Replace with your actual mashup origin
+  origin: 'https://upappuswna0375g', // Replace with your actual mashup origin
   credentials: true
 }));
 app.use(express.json());

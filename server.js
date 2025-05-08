@@ -6,11 +6,20 @@ require('dotenv').config();
 const app = express();
 const PORT = process.env.PORT || 3000;
 
+
+const allowedOrigins = ['http://your-qlik-mashup-domain', null];
+
 app.use(cors({
-  origin: 'http://your-qlik-mashup-domain', // ✅ Replace this with actual origin
+  origin: function (origin, callback) {
+    if (allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
   credentials: true
 }));
-app.use(express.json());
+
 
 // POST endpoint to receive userId and return JWT
 app.post('/generate-jwt', async (req, res) => {

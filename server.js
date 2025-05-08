@@ -34,6 +34,11 @@ app.post('/generate-jwt', async (req, res) => {
     // Step 1: Exchange PAT for access token
     const tokenUrl = `https://${snowflakeAccountURL}.snowflakecomputing.com/oauth/token`; // Replace with your token URL if needed
 
+    if (!PAT) {
+      console.error("❌ PAT is undefined");
+      return res.status(500).json({ error: 'PAT missing' });
+    }
+
     const bodyParams = new URLSearchParams({
       grant_type: "urn:ietf:params:oauth:grant-type:token-exchange",
       subject_token: PAT,

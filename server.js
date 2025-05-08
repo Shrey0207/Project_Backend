@@ -2,6 +2,7 @@ const express = require('express');
 const fetch = require('node-fetch'); // if using Node 18+, native fetch is available
 const cors = require('cors');
 require('dotenv').config(); // Optional: to load secrets from .env
+require('dotenv').config(); 
 
 const app = express();
 const PORT = process.env.PORT || 3000;

@@ -43,6 +43,7 @@ app.post('/generate-jwt', async (req, res) => {
         const connection = snowflake.createConnection({
           account: process.env.SNOWFLAKE_ACCOUNT,
           username: process.env.SNOWFLAKE_USER,
+          authenticator:'SNOWFLAKE_JWT',
           privateKey: privateKey,
           warehouse: process.env.SNOWFLAKE_WAREHOUSE,
           database: process.env.SNOWFLAKE_DATABASE,

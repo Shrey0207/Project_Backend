@@ -2,7 +2,6 @@
 node_modules/
 encoded_key.txt
 
-
 # Logs
 logs
 *.log

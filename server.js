@@ -3,6 +3,7 @@ const fetch = require('node-fetch');
 const cors = require('cors');
 const fs = require('fs');
 const snowflake = require('snowflake-sdk');
+const path = require('path');
 const crypto = require('crypto');
 require('dotenv').config();
 

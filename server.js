@@ -1,6 +1,7 @@
 const express = require('express');
 const fetch = require('node-fetch');
 const cors = require('cors');
+const snowflake = require('snowflake-sdk');
 require('dotenv').config();
 
 const app = express();

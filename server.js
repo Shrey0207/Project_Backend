@@ -1,6 +1,7 @@
 const express = require('express');
 const fetch = require('node-fetch');
 const cors = require('cors');
+const fs = require('fs');
 const snowflake = require('snowflake-sdk');
 require('dotenv').config();
 
@@ -27,10 +28,11 @@ app.post('/generate-jwt', async (req, res) => {
     console.log(`🔐 JWT requested by user: ${userId}`);
 
         // Step 0: Validate userId in Snowflake
+        const privateKey = fs.readFileSync('./Private_key.p8').toString(); // or use env var
         const connection = snowflake.createConnection({
           account: process.env.SNOWFLAKE_ACCOUNT,
           username: process.env.SNOWFLAKE_USER,
-          password: process.env.SNOWFLAKE_PASSWORD,
+          privateKey: privateKey,
           warehouse: process.env.SNOWFLAKE_WAREHOUSE,
           database: process.env.SNOWFLAKE_DATABASE,
           schema: process.env.SNOWFLAKE_SCHEMA,

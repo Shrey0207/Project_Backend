@@ -3,10 +3,25 @@ const fetch = require('node-fetch');
 const cors = require('cors');
 const fs = require('fs');
 const snowflake = require('snowflake-sdk');
+const crypto = require('crypto');
 require('dotenv').config();
 
 const app = express();
 const PORT = process.env.PORT || 3000;
+
+// Load encrypted private key from file
+const privateKeyPath = path.join(__dirname, 'Private_Key.p8');
+const privateKeyPem = fs.readFileSync(privateKeyPath, 'utf8');
+
+// Load passphrase securely from environment variable
+const passphrase = process.env.PRIVATE_KEY_PASSPHRASE;
+
+const privateKey = crypto.createPrivateKey({
+  key: privateKeyPem,
+  format: 'pem',
+  passphrase: passphrase,
+});
+
 
 app.use(cors({
   origin: 'http://upappuswna0375g', // exact match, including protocol
@@ -28,11 +43,10 @@ app.post('/generate-jwt', async (req, res) => {
     console.log(`🔐 JWT requested by user: ${userId}`);
 
         // Step 0: Validate userId in Snowflake
-        const privateKey = fs.readFileSync('./Private_key.p8').toString(); // or use env var
         const connection = snowflake.createConnection({
           account: process.env.SNOWFLAKE_ACCOUNT,
           username: process.env.SNOWFLAKE_USER,
-          privateKey: privateKey,
+          privateKey,
           warehouse: process.env.SNOWFLAKE_WAREHOUSE,
           database: process.env.SNOWFLAKE_DATABASE,
           schema: process.env.SNOWFLAKE_SCHEMA,

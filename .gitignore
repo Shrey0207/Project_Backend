@@ -1,5 +1,7 @@
 # Node.js dependencies
 node_modules/
+encoded_key.txt
+
 
 # Logs
 logs
@@ -14,6 +16,7 @@ pids
 
 # Environment variables
 .env
+
 
 # OS generated files
 .DS_Store

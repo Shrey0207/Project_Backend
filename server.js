@@ -4,16 +4,28 @@ const cors = require('cors');
 const crypto = require('crypto');
 const snowflake = require('snowflake-sdk');
 require('dotenv').config();
+const fs = require('fs');
+// // Load and decode the base64 private key
+// const privateKeyPem = Buffer.from(process.env.PRIVATE_KEY_BASE64, 'base64').toString('utf-8');
 
+// // Create crypto key object
+// const privateKey = crypto.createPrivateKey({
+//   key: privateKeyPem,
+//   format: 'pem',
+//   passphrase: process.env.PRIVATE_KEY_PASSPHRASE,
+// });
 
-// Load and decode the base64 private key
-const privateKeyPem = Buffer.from(process.env.PRIVATE_KEY_BASE64, 'base64').toString('utf-8');
+const privateKeyPath = path.join(__dirname, 'Private_Key.p8');
 
-// Create crypto key object
-const privateKey = crypto.createPrivateKey({
-  key: privateKeyPem,
+const privateKeyObject = crypto.createPrivateKey({
+  key: fs.readFileSync(privateKeyPath, 'utf8'),
   format: 'pem',
   passphrase: process.env.PRIVATE_KEY_PASSPHRASE,
+});
+
+const privateKey = privateKeyObject.export({
+  format: 'pem',
+  type: 'pkcs8',
 });
 
 
